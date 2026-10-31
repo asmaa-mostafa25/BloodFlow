@@ -1,9 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using BloodFlow.Domain.Entities;
+using BloodFlow.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace BloodFlow.Infrastructure.Persistence
 {
- public class AppDbContext:DbContext
+ public class AppDbContext: IdentityDbContext<ApplicationUser,IdentityRole<int>, int>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
