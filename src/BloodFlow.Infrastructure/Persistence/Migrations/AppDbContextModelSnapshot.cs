@@ -39,6 +39,48 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("BloodGroups");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = (byte)1,
+                            Code = "A+"
+                        },
+                        new
+                        {
+                            Id = (byte)2,
+                            Code = "A-"
+                        },
+                        new
+                        {
+                            Id = (byte)3,
+                            Code = "B+"
+                        },
+                        new
+                        {
+                            Id = (byte)4,
+                            Code = "B-"
+                        },
+                        new
+                        {
+                            Id = (byte)5,
+                            Code = "AB+"
+                        },
+                        new
+                        {
+                            Id = (byte)6,
+                            Code = "AB-"
+                        },
+                        new
+                        {
+                            Id = (byte)7,
+                            Code = "O+"
+                        },
+                        new
+                        {
+                            Id = (byte)8,
+                            Code = "O-"
+                        });
                 });
 
             modelBuilder.Entity("BloodFlow.Domain.Entities.Governorate", b =>
@@ -57,6 +99,143 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Governorates");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = (short)1,
+                            Name = "القاهرة"
+                        },
+                        new
+                        {
+                            Id = (short)2,
+                            Name = "الإسكندرية"
+                        },
+                        new
+                        {
+                            Id = (short)3,
+                            Name = "بورسعيد"
+                        },
+                        new
+                        {
+                            Id = (short)4,
+                            Name = "السويس"
+                        },
+                        new
+                        {
+                            Id = (short)5,
+                            Name = "البحر الأحمر"
+                        },
+                        new
+                        {
+                            Id = (short)6,
+                            Name = "دمياط"
+                        },
+                        new
+                        {
+                            Id = (short)7,
+                            Name = "الدقهلية"
+                        },
+                        new
+                        {
+                            Id = (short)8,
+                            Name = "الشرقية"
+                        },
+                        new
+                        {
+                            Id = (short)9,
+                            Name = "الإسماعيلية"
+                        },
+                        new
+                        {
+                            Id = (short)10,
+                            Name = "الجيزة"
+                        },
+                        new
+                        {
+                            Id = (short)11,
+                            Name = "المنوفية"
+                        },
+                        new
+                        {
+                            Id = (short)12,
+                            Name = "القليوبية"
+                        },
+                        new
+                        {
+                            Id = (short)13,
+                            Name = "البحيرة"
+                        },
+                        new
+                        {
+                            Id = (short)14,
+                            Name = "الغربية"
+                        },
+                        new
+                        {
+                            Id = (short)15,
+                            Name = "الأقصر"
+                        },
+                        new
+                        {
+                            Id = (short)16,
+                            Name = "أسيوط"
+                        },
+                        new
+                        {
+                            Id = (short)17,
+                            Name = "بني سويف"
+                        },
+                        new
+                        {
+                            Id = (short)18,
+                            Name = "الفيوم"
+                        },
+                        new
+                        {
+                            Id = (short)19,
+                            Name = "المنيا"
+                        },
+                        new
+                        {
+                            Id = (short)20,
+                            Name = "سوهاج"
+                        },
+                        new
+                        {
+                            Id = (short)21,
+                            Name = "قنا"
+                        },
+                        new
+                        {
+                            Id = (short)22,
+                            Name = "كفر الشيخ"
+                        },
+                        new
+                        {
+                            Id = (short)23,
+                            Name = "مطروح"
+                        },
+                        new
+                        {
+                            Id = (short)24,
+                            Name = "أسوان"
+                        },
+                        new
+                        {
+                            Id = (short)25,
+                            Name = "شمال سيناء"
+                        },
+                        new
+                        {
+                            Id = (short)26,
+                            Name = "جنوب سيناء"
+                        },
+                        new
+                        {
+                            Id = (short)27,
+                            Name = "الوادي الجديد"
+                        });
                 });
 
             modelBuilder.Entity("BloodFlow.Domain.Entities.Organization", b =>
