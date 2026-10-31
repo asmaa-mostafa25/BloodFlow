@@ -1,4 +1,5 @@
 using BloodFlow.Infrastructure;
+using BloodFlow.Infrastructure.Identity;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 
 var app = builder.Build();
-
+await IdentitySeeder.SeedAsync(app.Services); // Seed roles on application startup
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
