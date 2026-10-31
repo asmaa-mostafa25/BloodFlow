@@ -12,6 +12,8 @@ namespace BloodFlow.Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.UseCollation("Arabic_100_CI_AI");
+
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
         public DbSet<BloodGroup> BloodGroups { get; set; } = null!;

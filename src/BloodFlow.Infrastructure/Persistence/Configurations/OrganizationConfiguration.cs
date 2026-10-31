@@ -29,7 +29,13 @@ namespace BloodFlow.Infrastructure.Persistence.Configurations
                 .HasConversion<string>()
                 .HasMaxLength(12)
                 .IsUnicode(false);
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Organizations_Status", "[Status] IN ('Active', 'Deactivated')");
 
+                t.HasCheckConstraint("CK_Organizations_Type", "[Type] IN ('Hospital', 'BloodBank')");
+            }
+            );
         }
     }
 }

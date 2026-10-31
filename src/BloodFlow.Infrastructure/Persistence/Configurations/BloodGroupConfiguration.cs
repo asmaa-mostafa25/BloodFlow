@@ -11,9 +11,8 @@ namespace BloodFlow.Infrastructure.Persistence.Configurations
         {
             builder.HasKey(bg => bg.Id);
             builder.Property(bg => bg.Id).ValueGeneratedNever();
-            builder.Property(bg => bg.Code).IsRequired().HasMaxLength(3);
-           builder.HasIndex(bg => bg.Code).IsUnique();
-           
+            builder.Property(bg => bg.Code).IsRequired().HasMaxLength(3).IsUnicode(false);
+            builder.HasIndex(bg => bg.Code).IsUnique();
         }
     }
 }
