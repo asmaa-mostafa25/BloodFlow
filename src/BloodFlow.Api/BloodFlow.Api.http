@@ -1,6 +1,11 @@
 @BloodFlow.Api_HostAddress = http://localhost:5034
 
-GET {{BloodFlow.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+POST https://localhost:7244/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@bloodflow.local",
+  "password": "YOUR_PASSWORD"
+}
 
 ###

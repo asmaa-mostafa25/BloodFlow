@@ -1,4 +1,5 @@
-﻿using BloodFlow.Infrastructure.Identity;
+﻿using BloodFlow.Application.Auth;
+using BloodFlow.Infrastructure.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -13,7 +14,7 @@ namespace BloodFlow.Infrastructure.Authentication
         {
             _jwtSettings = jwtSettings.Value;
         }
-        public string GenerateToken(ApplicationUser user, IList<string> roles)
+        public AuthResponse GenerateToken(ApplicationUser user, IList<string> roles)
         {
             List<Claim> claims = new List<Claim>
             {
@@ -28,14 +29,15 @@ namespace BloodFlow.Infrastructure.Authentication
             }
             var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_jwtSettings.Key));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expiresAtUtc = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes);
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,
                 audience: _jwtSettings.Audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
+                expires: expiresAtUtc,
                 signingCredentials: creds
             );
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return new AuthResponse(new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc);
         }
     }
 }
