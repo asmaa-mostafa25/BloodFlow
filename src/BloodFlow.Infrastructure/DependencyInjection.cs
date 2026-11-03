@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using BloodFlow.Infrastructure.Persistence;
 using BloodFlow.Infrastructure.Identity;
+using BloodFlow.Infrastructure.Authentication;
 namespace BloodFlow.Infrastructure
 
 {
@@ -26,6 +27,8 @@ public static class DependencyInjection
                 options.User.RequireUniqueEmail = true;
             }).AddRoles<IdentityRole<int>>()
               .AddEntityFrameworkStores<AppDbContext>();
+            services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+            services.AddScoped<JwtTokenGenerator>();
             return services;
         }
     } 
