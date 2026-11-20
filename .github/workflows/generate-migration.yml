@@ -14,6 +14,8 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Install dotnet-ef
         run: dotnet tool install --global dotnet-ef --version 10.0.14
+      - name: Build
+        run: dotnet build BloodFlow.slnx
       - name: Add migration
         env:
           # Design time only: AddInfrastructure refuses to start without a JWT key.
