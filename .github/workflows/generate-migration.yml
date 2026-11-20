@@ -1,0 +1,29 @@
+name: Generate migration (temporary)
+
+on:
+  push:
+    branches: [ 'ci/generate-migration-inventory' ]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 10.0.14
+      - name: Build
+        run: dotnet build BloodFlow.slnx
+      - name: Add migration
+        env:
+          Jwt__Key: design-time-placeholder-key-not-used-for-anything-0123456789
+        run: dotnet ef migrations add AddInventory --project src/BloodFlow.Infrastructure --startup-project src/BloodFlow.Api --output-dir Persistence/Migrations
+      - name: Print migration files (base64 tar)
+        run: |
+          cd src/BloodFlow.Infrastructure/Persistence/Migrations
+          echo "-----BEGIN MIGRATION-----"
+          tar czf - *AddInventory* AppDbContextModelSnapshot.cs | base64 -w 0
+          echo
+          echo "-----END MIGRATION-----"
