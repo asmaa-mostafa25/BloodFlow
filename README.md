@@ -138,6 +138,23 @@ All errors use the standard **ProblemDetails** JSON with an extra `code` field (
 | GET · PUT | `/api/admin/settings` · `/api/admin/settings/{key}` | System Admin | System parameters (medical ones need `approvalReference`) |
 | GET | `/api/admin/audit-logs` | System Admin | Read-only audit trail |
 
+### Slice 2 — Inventory (Hospital & Blood Bank staff)
+
+Staff always work on **their own organization** (taken from `org_id` in the token).
+
+| Method | Route | What |
+|---|---|---|
+| GET | `/api/inventory/summary` | Per blood group: on hand, reserved, available, near expiry, expired |
+| GET | `/api/inventory/batches?bloodGroupId=&status=&expiringWithinDays=` | Batches in FEFO order (earliest expiry first) |
+| GET | `/api/inventory/batches/{id}` | One batch |
+| POST | `/api/inventory/batches` | Manual intake (expiry defaults to collection + shelf-life setting) |
+| POST | `/api/inventory/batches/{id}/adjust` | `Damaged` / `Expired` (decrease) or `Correction` (±), reason required |
+| GET | `/api/inventory/transactions` | Stock ledger (append-only) |
+| GET | `/api/admin/inventory/organizations/{id}/summary` | System Admin, read-only |
+
+Send a new `clientRequestId` (GUID) with each intake/adjust form submission: repeating the same request never changes stock twice.
+A background job marks batches as `Expired` the day after their expiry date (Cairo time).
+
 **Token claims:** `sub` (user id), `email`, `name`, `role`, and `org_id` for staff.
 
 ---
@@ -189,8 +206,14 @@ All errors use the standard **ProblemDetails** JSON with an extra `code` field (
 - [x] Swagger UI with JWT, ProblemDetails errors
 - [ ] Notifications to staff on approval (moves to Slice 7)
 
+**Slice 2 — Blood Bank Staff**
+- [x] BloodBatch + append-only InventoryTransaction ledger
+- [x] Manual intake and adjustments (idempotent, concurrency-safe)
+- [x] Stock summary, FEFO batch list, near-expiry filter
+- [x] Background expiry job
+- [ ] Invalidate reservations of expired batches (needs Slice 3)
+
 **Next slices**
-- [ ] Slice 2 — Blood Bank Staff (batches & inventory ledger)
 - [ ] Slice 3 — Hospital Staff (requests, reservations, emergency handling)
 - [ ] Slice 4 — Donors & donations
 - [ ] Slice 5 — Recipients
