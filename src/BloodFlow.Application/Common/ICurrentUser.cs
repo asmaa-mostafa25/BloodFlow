@@ -9,5 +9,8 @@ namespace BloodFlow.Application.Common
         int? UserId { get; }
         string? Role { get; }
         string? IpAddress { get; }
+
+        /// <summary>The staff member's organization (from the org_id claim). Null for non-staff.</summary>
+        int? OrganizationId { get; }
     }
 }
