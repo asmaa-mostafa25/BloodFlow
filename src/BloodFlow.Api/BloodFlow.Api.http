@@ -69,3 +69,41 @@ Authorization: Bearer {{token}}
 ### Admin: audit trail
 GET {{host}}/api/admin/audit-logs?pageSize=20
 Authorization: Bearer {{token}}
+
+### ---------- Slice 2: inventory (log in as an approved staff member first) ----------
+
+### Stock summary
+GET {{host}}/api/inventory/summary
+Authorization: Bearer {{token}}
+
+### Manual intake: 10 units of O+ (bloodGroupId 7); expiry defaults to collection + 35 days
+POST {{host}}/api/inventory/batches
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bloodGroupId": 7,
+  "quantity": 10,
+  "collectionDate": "2026-11-19",
+  "clientRequestId": "6f1c2a52-6b0e-4c55-9a43-1f4b3c2d8e01"
+}
+
+### Batches expiring within 7 days (FEFO order)
+GET {{host}}/api/inventory/batches?expiringWithinDays=7
+Authorization: Bearer {{token}}
+
+### Remove 2 damaged units from batch 1
+POST {{host}}/api/inventory/batches/1/adjust
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantityDelta": -2,
+  "reasonCode": "Damaged",
+  "reason": "Two bags leaked in the fridge.",
+  "clientRequestId": "9a0d7c11-2f3e-4b8a-8c6d-5e4f3a2b1c00"
+}
+
+### Stock ledger
+GET {{host}}/api/inventory/transactions
+Authorization: Bearer {{token}}

@@ -15,6 +15,10 @@ namespace BloodFlow.Application.Common
         public const string OrganizationActivated = "Organization.Activated";
 
         public const string SettingUpdated = "Setting.Updated";
+
+        public const string BatchIntake = "Batch.Intake";
+        public const string BatchAdjusted = "Batch.Adjusted";
+        public const string BatchExpired = "Batch.Expired";
     }
 
     public static class AuditEntityTypes
@@ -22,5 +26,6 @@ namespace BloodFlow.Application.Common
         public const string User = "User";
         public const string Organization = "Organization";
         public const string SystemSetting = "SystemSetting";
+        public const string BloodBatch = "BloodBatch";
     }
 }
