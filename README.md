@@ -86,6 +86,16 @@ cd ../..
 > Replace `.\SQLEXPRESS` with your own SQL Server instance name (e.g. `(localdb)\MSSQLLocalDB`).
 > ⚠️ Never commit connection strings, passwords or keys to the repository.
 
+Then set the JWT signing key and the first System Admin account (still inside `src/BloodFlow.Api`):
+
+```bash
+dotnet user-secrets set "Jwt:Key" "<a long random value, at least 32 characters>"
+dotnet user-secrets set "AdminSeed:Email" "admin@bloodflow.local"
+dotnet user-secrets set "AdminSeed:Password" "<a strong password: 8+ chars, upper, lower, digit>"
+```
+
+The API refuses to start if any of these are missing, and the error message says which one.
+
 ### 4. Create the database
 
 From the solution root:
@@ -104,7 +114,31 @@ This creates the database and seeds the **27 governorates** and **8 blood groups
 dotnet run --project src/BloodFlow.Api
 ```
 
-On startup, the **five application roles** are seeded automatically.
+On startup the API seeds the **five roles**, the **first System Admin** and the **default system settings** (only what is missing; nothing is overwritten).
+
+In Development, open **Swagger UI** at `https://localhost:7244/swagger`: call `POST /api/auth/login`, copy the `token`, click **Authorize** and paste it.
+
+---
+
+## 🔌 API (Slice 1)
+
+All errors use the standard **ProblemDetails** JSON with an extra `code` field (e.g. `Staff.InvalidStatus`). Enums are sent as text (`"Hospital"`, `"Pending"`).
+
+| Method | Route | Who | What |
+|---|---|---|---|
+| POST | `/api/auth/login` | Anyone | Sign in; only **Active** accounts get a token |
+| POST | `/api/auth/register/staff` | Anyone | Staff self-registration → account is **Pending** |
+| GET | `/api/lookups/governorates` · `/blood-groups` · `/organizations` | Anyone | Dropdown data (active organizations only) |
+| GET | `/api/admin/staff?status=Pending` | System Admin | Approval queue (oldest first) |
+| GET | `/api/admin/staff/{userId}` | System Admin | Staff details |
+| POST | `/api/admin/staff/{userId}/approve` · `/reject` · `/deactivate` · `/reactivate` | System Admin | Change account status (reject/deactivate need a `reason`) |
+| GET · POST | `/api/admin/organizations` | System Admin | List / create hospitals and blood banks |
+| GET · PUT | `/api/admin/organizations/{id}` | System Admin | Details / update (send back `rowVersion`) |
+| POST | `/api/admin/organizations/{id}/deactivate` · `/activate` | System Admin | Change organization status |
+| GET · PUT | `/api/admin/settings` · `/api/admin/settings/{key}` | System Admin | System parameters (medical ones need `approvalReference`) |
+| GET | `/api/admin/audit-logs` | System Admin | Read-only audit trail |
+
+**Token claims:** `sub` (user id), `email`, `name`, `role`, and `org_id` for staff.
 
 ---
 
@@ -147,10 +181,13 @@ On startup, the **five application roles** are seeded automatically.
 - [x] Role seeding on startup
 
 **Slice 1 — System Admin**
-- [ ] First System Admin account
-- [ ] StaffProfile, SystemSetting, AuditLog
-- [ ] JWT authentication (login endpoint)
-- [ ] Organization management & staff approval endpoints
+- [x] First System Admin account
+- [x] JWT authentication (login endpoint)
+- [x] StaffProfile, SystemSetting, AuditLog
+- [x] Staff self-registration + admin approval / rejection / deactivation
+- [x] Organization management
+- [x] Swagger UI with JWT, ProblemDetails errors
+- [ ] Notifications to staff on approval (moves to Slice 7)
 
 **Next slices**
 - [ ] Slice 2 — Blood Bank Staff (batches & inventory ledger)
@@ -167,6 +204,7 @@ On startup, the **five application roles** are seeded automatically.
 | Role | Members |
 |---|---|
 | Backend & Team Lead | Asmaa Mostafa |
-| Frontend | 4 members |
-| UI/UX | 3 members |
-| AI | 1 member |
+| Frontend | Fadaa Mohamed · Farah Mahmoud · Habiba Atef · Mennatullah Saeed |
+| UI/UX | Maryam Helmy · Shahd Sherif · Eman Mahmoud |
+| AI | Mennatullah Shaker |
+| Supervisor | Dr. Ahmed Salam |

@@ -1,7 +1,11 @@
-﻿namespace BloodFlow.Application.Auth
+using BloodFlow.Application.Common;
+
+namespace BloodFlow.Application.Auth
 {
     public interface IAuthService
     {
-        Task<AuthResponse?> LoginAsync(LoginRequest request);
+        Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
+
+        Task<Result<RegisterStaffResponse>> RegisterStaffAsync(RegisterStaffRequest request, CancellationToken cancellationToken = default);
     }
 }

@@ -1,4 +1,7 @@
-﻿using BloodFlow.Application.Common;
+using BloodFlow.Application.Common;
+using BloodFlow.Domain.Enums;
+using BloodFlow.Infrastructure.Persistence;
+using BloodFlow.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +19,9 @@ namespace BloodFlow.Infrastructure.Identity
 
             await SeedRolesAsync(roleManager);
             await SeedAdminAsync(userManager, configuration);
+
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await SystemSettingSeeder.SeedAsync(db);
         }
 
         public static async Task SeedRolesAsync(RoleManager<IdentityRole<int>> roleManager)
@@ -55,7 +61,10 @@ namespace BloodFlow.Infrastructure.Identity
                 {
                     UserName = adminEmail,
                     Email = adminEmail,
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    FullName = "System Administrator",
+                    AccountStatus = AccountStatus.Active,
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 var createResult = await userManager.CreateAsync(adminUser, adminPassword);
@@ -66,7 +75,25 @@ namespace BloodFlow.Infrastructure.Identity
                 }
             }
 
-            // 3. Here adminUser always exists (old or new) → make sure it has the role
+            // 3. An admin created before AccountStatus/FullName existed got the column
+            //    defaults (Pending, empty name). Fix it so the admin can still sign in.
+            if (adminUser.AccountStatus != AccountStatus.Active || string.IsNullOrWhiteSpace(adminUser.FullName))
+            {
+                adminUser.AccountStatus = AccountStatus.Active;
+                if (string.IsNullOrWhiteSpace(adminUser.FullName))
+                {
+                    adminUser.FullName = "System Administrator";
+                }
+
+                var updateResult = await userManager.UpdateAsync(adminUser);
+                if (!updateResult.Succeeded)
+                {
+                    var errors = string.Join(", ", updateResult.Errors.Select(e => e.Description));
+                    throw new InvalidOperationException($"Failed to activate admin user: {errors}");
+                }
+            }
+
+            // 4. Here adminUser always exists (old or new) → make sure it has the role
             if (!await userManager.IsInRoleAsync(adminUser, Roles.SystemAdmin))
             {
                 var roleResult = await userManager.AddToRoleAsync(adminUser, Roles.SystemAdmin);
