@@ -2,6 +2,7 @@ using System.Text;
 using BloodFlow.Application.Audit;
 using BloodFlow.Application.Auth;
 using BloodFlow.Application.Common;
+using BloodFlow.Application.Inventory;
 using BloodFlow.Application.Lookups;
 using BloodFlow.Application.Organizations;
 using BloodFlow.Application.Settings;
@@ -10,6 +11,7 @@ using BloodFlow.Domain.Enums;
 using BloodFlow.Infrastructure.Authentication;
 using BloodFlow.Infrastructure.Common;
 using BloodFlow.Infrastructure.Identity;
+using BloodFlow.Infrastructure.Inventory;
 using BloodFlow.Infrastructure.Persistence;
 using BloodFlow.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -57,6 +59,15 @@ namespace BloodFlow.Infrastructure
             services.AddScoped<ILookupService, LookupService>();
             services.AddScoped<ISystemSettingService, SystemSettingService>();
             services.AddScoped<IAuditLogService, AuditLogService>();
+
+            // ---------- Inventory (Slice 2) ----------
+            services.AddSingleton<IClock, SystemClock>();
+            services.AddScoped<SettingsReader>();
+            services.AddScoped<InventorySummaryBuilder>();
+            services.AddScoped<IInventoryService, InventoryService>();
+            services.AddScoped<IInventoryReportService, InventoryReportService>();
+            services.AddScoped<IBatchExpiryService, BatchExpiryService>();
+            services.AddHostedService<BatchExpiryBackgroundService>();
 
             // ---------- JWT ----------
             services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));

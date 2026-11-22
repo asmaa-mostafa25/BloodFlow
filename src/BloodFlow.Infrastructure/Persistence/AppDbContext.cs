@@ -27,5 +27,7 @@ namespace BloodFlow.Infrastructure.Persistence
         public DbSet<StaffProfile> StaffProfiles { get; set; } = null!;
         public DbSet<SystemSetting> SystemSettings { get; set; } = null!;
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+        public DbSet<BloodBatch> BloodBatches { get; set; } = null!;
+        public DbSet<InventoryTransaction> InventoryTransactions { get; set; } = null!;
     }
 }

@@ -20,5 +20,10 @@ namespace BloodFlow.Api.Common
         public string? Role => _httpContextAccessor.HttpContext?.User.FindFirst(AppClaimTypes.Role)?.Value;
 
         public string? IpAddress => _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+
+        public int? OrganizationId =>
+            int.TryParse(_httpContextAccessor.HttpContext?.User.FindFirst(AppClaimTypes.OrganizationId)?.Value, out var id)
+                ? id
+                : null;
     }
 }
