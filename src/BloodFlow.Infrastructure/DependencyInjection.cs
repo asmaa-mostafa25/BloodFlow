@@ -5,6 +5,7 @@ using BloodFlow.Application.Common;
 using BloodFlow.Application.Inventory;
 using BloodFlow.Application.Lookups;
 using BloodFlow.Application.Organizations;
+using BloodFlow.Application.Requests;
 using BloodFlow.Application.Settings;
 using BloodFlow.Application.Staff;
 using BloodFlow.Domain.Enums;
@@ -12,7 +13,9 @@ using BloodFlow.Infrastructure.Authentication;
 using BloodFlow.Infrastructure.Common;
 using BloodFlow.Infrastructure.Identity;
 using BloodFlow.Infrastructure.Inventory;
+using BloodFlow.Infrastructure.Jobs;
 using BloodFlow.Infrastructure.Persistence;
+using BloodFlow.Infrastructure.Requests;
 using BloodFlow.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -67,7 +70,15 @@ namespace BloodFlow.Infrastructure
             services.AddScoped<IInventoryService, InventoryService>();
             services.AddScoped<IInventoryReportService, InventoryReportService>();
             services.AddScoped<IBatchExpiryService, BatchExpiryService>();
-            services.AddHostedService<BatchExpiryBackgroundService>();
+
+            // ---------- Requests & reservations (Slice 3) ----------
+            services.AddScoped<RequestReads>();
+            services.AddScoped<IRequestService, RequestService>();
+            services.AddScoped<IRequestAdminService, RequestAdminService>();
+            services.AddScoped<IRequestMaintenanceService, RequestMaintenanceService>();
+
+            // One hourly job: batch expiry (+ reservation invalidation) and patient-name anonymization.
+            services.AddHostedService<MaintenanceBackgroundService>();
 
             // ---------- JWT ----------
             services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));

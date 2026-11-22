@@ -32,6 +32,11 @@ namespace BloodFlow.Infrastructure.Persistence.Configurations
                 .HasForeignKey(t => t.PerformedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasOne(t => t.ReservationLine)
+                .WithMany()
+                .HasForeignKey(t => t.ReservationLineId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasIndex(t => new { t.OrganizationId, t.CreatedAt });
 
             // Idempotency: the same client request id can only ever be used once.
@@ -51,6 +56,9 @@ namespace BloodFlow.Infrastructure.Persistence.Configurations
                 t.HasCheckConstraint("CK_InventoryTransactions_After",
                     "[OnHandAfter] >= 0 AND [ReservedAfter] >= 0 AND [OnHandAfter] >= [ReservedAfter]");
                 t.HasCheckConstraint("CK_InventoryTransactions_ActorType", "[ActorType] IN ('User', 'System')");
+                // Reserve, Release and Deduct always point to the reservation line that caused them.
+                t.HasCheckConstraint("CK_InventoryTransactions_ReservationLine",
+                    "[TransactionType] NOT IN ('Reserve', 'Release', 'Deduct') OR [ReservationLineId] IS NOT NULL");
                 t.HasCheckConstraint("CK_InventoryTransactions_Actor",
                     "([ActorType] = 'User' AND [PerformedByUserId] IS NOT NULL) OR ([ActorType] = 'System' AND [PerformedByUserId] IS NULL)");
             });
