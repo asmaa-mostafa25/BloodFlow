@@ -9,6 +9,7 @@ using BloodFlow.Application.Requests;
 using BloodFlow.Application.Settings;
 using BloodFlow.Application.Staff;
 using BloodFlow.Domain.Enums;
+using BloodFlow.Infrastructure.Ai;
 using BloodFlow.Infrastructure.Authentication;
 using BloodFlow.Infrastructure.Common;
 using BloodFlow.Infrastructure.Identity;
@@ -79,6 +80,9 @@ namespace BloodFlow.Infrastructure
 
             // One hourly job: batch expiry (+ reservation invalidation) and patient-name anonymization.
             services.AddHostedService<MaintenanceBackgroundService>();
+
+            // ---------- AI service (server-to-server, the API key never reaches the browser) ----------
+            services.AddBloodFlowAi(configuration);
 
             // ---------- JWT ----------
             services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));

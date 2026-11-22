@@ -21,6 +21,7 @@ BloodFlow connects **hospitals, blood banks, donors and recipients** across Egyp
 | **1 · System Admin** | Staff registration & approval, organizations, settings, audit log | ✅ Done — PR [#1](https://github.com/asmaa-mostafa25/BloodFlow/pull/1) |
 | **2 · Blood Bank Staff** | Batches, stock ledger, intake, adjustments, expiry job | ✅ Done — PR [#2](https://github.com/asmaa-mostafa25/BloodFlow/pull/2) |
 | **3 · Hospital Staff** | Requests, FEFO reservations, fulfilment, receipt, emergencies | ✅ Done — PR [#4](https://github.com/asmaa-mostafa25/BloodFlow/pull/4) |
+| **AI integration** | Backend ↔ AI service (forecast, shortage, expiry, substitutions, retrain) | ✅ Done — PR [#3](https://github.com/asmaa-mostafa25/BloodFlow/pull/3) |
 | 4 · Donors | Donor profile, donations & verification, points & badges | ⏳ Next |
 | 5 · Recipients | Recipient requests and tracking | ⏳ |
 | 6 · Transfers | Moving stock between organizations | ⏳ |
@@ -198,6 +199,31 @@ Open **Swagger UI**: <https://localhost:7244/swagger>
 | `database update` (migration `HasData`) | 27 governorates, 8 blood groups |
 | Every API start (only if missing) | 5 roles, the first System Admin, 9 default system settings |
 
+### 6. Connect the AI service
+
+The backend talks to the BloodFlow AI service (FastAPI) server-to-server. The frontend never calls the AI directly: it calls `/api/ai/*` with its JWT, and the backend adds the AI key.
+
+1. Start the AI server (in the AI folder): `python -m uvicorn api:app --host 0.0.0.0 --port 8000`, and wait for `Application startup complete`.
+2. Give the backend the same key the AI server uses (`BLOODFLOW_API_KEY`, default `bloodflow-secret` for testing only):
+   ```bash
+   cd src/BloodFlow.Api
+   dotnet user-secrets set "BloodFlowAi:ApiKey" "bloodflow-secret"
+   ```
+3. If the AI runs on another machine, change `BloodFlowAi:BaseUrl` in `appsettings.json` (e.g. `http://192.168.1.10:8000`).
+
+| Backend endpoint | AI endpoint | Who |
+|---|---|---|
+| `GET /api/ai/health` | `GET /health` | anyone |
+| `GET /api/ai/stock` | `GET /stock` | staff |
+| `GET /api/ai/forecast` | `GET /forecast/all` | staff |
+| `POST /api/ai/shortage` | `POST /predict/shortage` | staff |
+| `POST /api/ai/expiry` | `POST /predict/expiry` | staff |
+| `POST /api/ai/substitutions` | `POST /substitutions` | staff |
+| `POST /api/ai/demand` | `POST /predict/demand` | staff |
+| `POST /api/ai/retrain` | `POST /retrain` | SystemAdmin |
+
+Staff = SystemAdmin, HospitalStaff, BloodBankStaff. Responses are camelCase. Errors come back as ProblemDetails: `400` bad input (the AI's message is in `detail`), `409` a retrain is already running, `502` wrong AI key, `503` AI server down or still starting. `retrain` defaults to `mode: "append"`.
+
 ---
 
 ## ⚙️ Configuration
@@ -209,6 +235,8 @@ Open **Swagger UI**: <https://localhost:7244/swagger>
 | `Jwt:Issuer` / `Jwt:Audience` | `appsettings.json` | `BloodFlow.Api` / `BloodFlow.Client` | |
 | `Jwt:ExpiryMinutes` | `appsettings.json` | `60` | Short on purpose |
 | `AdminSeed:Email` / `AdminSeed:Password` | User Secrets | — | Required, used to create the first admin |
+| `BloodFlowAi:ApiKey` | User Secrets | — | Same key as the AI server. Missing → AI calls return `502` |
+| `BloodFlowAi:BaseUrl` | `appsettings.json` | `http://127.0.0.1:8000` | Where the AI service runs |
 | `App:TimeZone` | `appsettings.json` | `Africa/Cairo` | Decides "today" for expiry dates |
 
 On a server (e.g. MonsterASP) use **environment variables** instead of User Secrets: `ConnectionStrings__DefaultConnection`, `Jwt__Key`, `AdminSeed__Email`, `AdminSeed__Password`.

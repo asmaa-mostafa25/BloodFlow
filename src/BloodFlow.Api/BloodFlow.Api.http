@@ -173,3 +173,35 @@ Authorization: Bearer {{token}}
 ### (Admin) Emergency overrides waiting for review
 GET {{host}}/api/admin/emergency-overrides
 Authorization: Bearer {{token}}
+
+### ---------- AI service (start the AI server first; uses the same @token) ----------
+
+GET {{host}}/api/ai/health
+
+###
+GET {{host}}/api/ai/forecast
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/ai/shortage
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "stocks": { "O+": 240, "B-": 3 }
+}
+
+###
+POST {{host}}/api/ai/expiry
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/ai/substitutions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "stocks": { "B-": 2 }
+}
+
+###
