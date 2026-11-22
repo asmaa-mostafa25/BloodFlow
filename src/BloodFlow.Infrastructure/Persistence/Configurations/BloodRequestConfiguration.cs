@@ -48,8 +48,8 @@ namespace BloodFlow.Infrastructure.Persistence.Configurations
             // Boards and monitoring: open requests by status, emergencies first, by deadline.
             builder.HasIndex(r => new { r.Status, r.RequestType, r.NeededBy });
             builder.HasIndex(r => new { r.DestinationHospitalId, r.Status });
-            // Duplicate protection lookup (same requester, patient group and hospital within 24 h).
-            builder.HasIndex(r => new { r.CreatedByUserId, r.BloodGroupId, r.DestinationHospitalId, r.CreatedAt });
+            // Duplicate protection lookup: same hospital and blood group, created in the last N hours.
+            builder.HasIndex(r => new { r.DestinationHospitalId, r.BloodGroupId, r.CreatedAt });
 
             builder.ToTable(t =>
             {
