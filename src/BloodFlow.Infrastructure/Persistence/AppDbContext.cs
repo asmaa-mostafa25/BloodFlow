@@ -19,6 +19,10 @@ namespace BloodFlow.Infrastructure.Persistence
             modelBuilder.UseCollation("Arabic_100_CI_AI");
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+            // Request numbers (BR-2026-000123) come from a database sequence: unique even
+            // when two hospitals create requests at the same moment.
+            modelBuilder.HasSequence<int>(Configurations.BloodRequestConfiguration.NumberSequence).StartsAt(1);
         }
 
         public DbSet<BloodGroup> BloodGroups { get; set; } = null!;
@@ -29,5 +33,10 @@ namespace BloodFlow.Infrastructure.Persistence
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
         public DbSet<BloodBatch> BloodBatches { get; set; } = null!;
         public DbSet<InventoryTransaction> InventoryTransactions { get; set; } = null!;
+        public DbSet<BloodRequest> BloodRequests { get; set; } = null!;
+        public DbSet<BloodRequestStatusHistory> BloodRequestStatusHistory { get; set; } = null!;
+        public DbSet<Reservation> Reservations { get; set; } = null!;
+        public DbSet<ReservationLine> ReservationLines { get; set; } = null!;
+        public DbSet<EmergencyOverride> EmergencyOverrides { get; set; } = null!;
     }
 }

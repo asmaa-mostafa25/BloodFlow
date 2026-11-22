@@ -20,8 +20,8 @@ BloodFlow connects **hospitals, blood banks, donors and recipients** across Egyp
 | Foundation | Clean Architecture, reference data, Identity, JWT login | ✅ Done |
 | **1 · System Admin** | Staff registration & approval, organizations, settings, audit log | ✅ Done — PR [#1](https://github.com/asmaa-mostafa25/BloodFlow/pull/1) |
 | **2 · Blood Bank Staff** | Batches, stock ledger, intake, adjustments, expiry job | ✅ Done — PR [#2](https://github.com/asmaa-mostafa25/BloodFlow/pull/2) |
-| 3 · Hospital Staff | Requests, FEFO reservations, fulfilment, receipt, emergencies | ⏳ Next |
-| 4 · Donors | Donor profile, donations & verification, points & badges | ⏳ |
+| **3 · Hospital Staff** | Requests, FEFO reservations, fulfilment, receipt, emergencies | ✅ Done — PR [#4](https://github.com/asmaa-mostafa25/BloodFlow/pull/4) |
+| 4 · Donors | Donor profile, donations & verification, points & badges | ⏳ Next |
 | 5 · Recipients | Recipient requests and tracking | ⏳ |
 | 6 · Transfers | Moving stock between organizations | ⏳ |
 | 7 · Notifications | Email & in-app alerts, escalation | ⏳ |
@@ -298,6 +298,30 @@ Staff always work on **their own organization** (from `org_id`), never an id sen
 | POST | `/batches/{id}/adjust` | `{ quantityDelta, reasonCode, reason, clientRequestId? }` |
 | GET | `/transactions?batchId=&type=&fromUtc=&toUtc=` | Stock ledger, newest first |
 
+### Blood requests — `/api/requests/...` (Hospital & Blood Bank staff)
+
+```
+Pending ──approve──► Approved ──fulfil──► Fulfilled ──receive──► Received
+   ├─reject──► Rejected   └─cancel──► Cancelled (reserved units released)
+   └─cancel──► Cancelled
+```
+
+| Method | Route | Who | What |
+|---|---|---|---|
+| POST | `/` | Hospital | Create `{ requestType, bloodGroupId, unitsRequested, neededBy, patientFullName, clientRequestId? }` |
+| GET | `/hospital?status=&type=&bloodGroupId=&onlyFlagged=` | Hospital | Requests for my hospital |
+| GET | `/board?type=&bloodGroupId=&allGovernorates=` | Staff | Open requests I can fulfil — emergencies first, with my available units |
+| GET | `/executing` | Staff | Requests my organization reserved |
+| GET | `/{id}` · `/{id}/history` | Parties | Details (with reservation lines) · status timeline |
+| POST | `/{id}/verify` | Destination hospital | Verify a request it did not create |
+| POST | `/{id}/approve` | Other hospital / blood bank | Reserve **all** units now, FEFO — no partial approvals |
+| POST | `/{id}/reallocate` | Executing org | Top up after a reserved batch expired |
+| POST | `/{id}/fulfil` | Executing org | Units leave stock. Unverified emergency → `{ emergencyOverrideReason }` |
+| POST | `/{id}/receive` | Destination hospital | Confirm arrival |
+| POST | `/{id}/reject` · `/{id}/cancel` | See rules | `{ reason }` — cancelling an approved request releases its units |
+
+Admin: `GET /api/admin/requests?onlyFlagged=true`, `POST /api/admin/requests/{id}/cancel` (pending only), `GET /api/admin/emergency-overrides`, `POST /api/admin/emergency-overrides/{id}/review`.
+
 Ready-made requests: [`src/BloodFlow.Api/BloodFlow.Api.http`](src/BloodFlow.Api/BloodFlow.Api.http).
 
 ---
@@ -313,7 +337,7 @@ Ready-made requests: [`src/BloodFlow.Api/BloodFlow.Api.http`](src/BloodFlow.Api/
 | **Dates** | Date-only fields (`collectionDate`, `expiryDate`) use `"2026-11-20"` |
 | **Paging** | `page` (from 1) and `pageSize` (default 20, max 100) → `{ items, page, pageSize, totalCount, totalPages }` |
 | **Concurrency** | Editable records return a `rowVersion`. Send it back on update; `409` means someone changed it first — reload. |
-| **Idempotency** | For stock operations send a new GUID `clientRequestId` per form submission; resending the same one never changes stock twice. |
+| **Idempotency** | For stock operations and new requests send a new GUID `clientRequestId` per form submission; resending the same one never changes stock twice. |
 
 ---
 
@@ -324,7 +348,7 @@ From the Phase 1 business workflows:
 **Staff & organizations (A1, A2)**
 - Staff register as `Pending`; their kind (hospital / blood bank) always equals their organization's type — enforced by a composite foreign key.
 - Approval requires an active organization. Reject and deactivate need a reason. `Rejected` is final.
-- An organization's type cannot change after creation. Names are unique per governorate.
+- An organization with active reservations or open requests cannot be deactivated. An organization's type cannot change after creation. Names are unique per governorate.
 - Every status change writes an audit row **in the same database transaction**.
 
 **Inventory (B1, H4, A3)**
@@ -335,11 +359,21 @@ From the Phase 1 business workflows:
 - A batch is usable until the end of its expiry date (Cairo time). A background job marks it `Expired` afterwards.
 - The admin can see stock but never change it.
 
+**Requests & reservations (H1–H3, B2–B3, section 4)**
+- Hospital staff create requests for their own hospital (verified at creation). Units ≤ `Requests.MaxUnitsPerRequest`; `neededBy` in the future.
+- Duplicate guard: same hospital + blood group + patient with an open request inside `Requests.DuplicateWindowHours` → `409`.
+- Approve reserves every unit immediately using **FEFO**; not enough usable stock → nothing is reserved. One live reservation per request (unique index), so two banks can't both win.
+- Every stock move (`Reserve`, `Release`, `Deduct`) writes a ledger row linked to its reservation line. Composite foreign keys guarantee a reserved batch belongs to the same organization **and** blood group.
+- Expired reserved batches are released as `Invalidated` (hourly job, and again at fulfil time); the request shows *needs reallocation*. Expired blood is never sent.
+- Normal requests must be verified before approval and fulfilment. Emergencies can be reserved early and fulfilled unverified only with an override reason, which is recorded and reviewed by the admin.
+- Flags: approved past `neededBy` (overdue), fulfilled but not received within `Requests.ReceiptConfirmationHours`, emergency pending longer than `Requests.EmergencyEscalationMinutes`.
+- Patient names are visible only to the destination hospital and the requester, never written to the audit log, and removed after `Privacy.PatientNameRetentionMonths`.
+
 ---
 
 ## 🗄️ Database
 
-**Tables (15):** `Governorates`, `BloodGroups`, `Organizations`, the 7 Identity tables (`AspNetUsers`, `AspNetRoles`, …), `StaffProfiles`, `SystemSettings`, `AuditLogs`, `BloodBatches`, `InventoryTransactions`.
+**Tables (20):** `Governorates`, `BloodGroups`, `Organizations`, the 7 Identity tables (`AspNetUsers`, `AspNetRoles`, …), `StaffProfiles`, `SystemSettings`, `AuditLogs`, `BloodBatches`, `InventoryTransactions`, `BloodRequests`, `BloodRequestStatusHistory`, `Reservations`, `ReservationLines`, `EmergencyOverrides`.
 
 | Migration | Adds |
 |---|---|
@@ -348,6 +382,7 @@ From the Phase 1 business workflows:
 | `AddIdentity` | Identity tables (`int` keys) |
 | `AddAdminSlice` | Account status, staff profiles, settings, audit log |
 | `AddInventory` | Blood batches, inventory ledger |
+| `AddRequests` | Requests, status history, reservations, emergency overrides, request-number sequence |
 
 Conventions: statuses stored as text with CHECK constraints · all foreign keys `Restrict` (no hard deletes) · UTC `datetime2`, `date` for date-only · `rowversion` on records edited concurrently.
 
@@ -398,7 +433,7 @@ dotnet test
 dotnet list package --vulnerable --include-transitive
 ```
 
-- **48 unit tests** cover the pure rules: inventory intake/adjustment/expiry, setting values, `Result`, paging.
+- **83 unit tests** cover the pure rules: request transitions, FEFO allocation, flags, emergency override, inventory intake/adjustment/expiry, setting values, `Result`, paging.
 - **GitHub Actions** ([`ci.yml`](.github/workflows/ci.yml)) runs restore, build, tests and the vulnerability check on every push to `master` and `feature/**`, and on every pull request.
 - `global.json` pins the .NET 10 SDK so local machines and CI build the same way.
 
@@ -422,6 +457,8 @@ dotnet list package --vulnerable --include-transitive
 | Phase 2 — database design, ERD, DBML | Project files |
 | Slice 1 implementation report (Arabic) | [`docs/reports/BloodFlow_AdminSlice_Report.pdf`](docs/reports/BloodFlow_AdminSlice_Report.pdf) |
 | Slice 2 implementation report (Arabic) | [`docs/reports/BloodFlow_InventorySlice_Report.pdf`](docs/reports/BloodFlow_InventorySlice_Report.pdf) |
+| Slice 3 implementation report (Arabic) | [`docs/reports/BloodFlow_RequestsSlice_Report.pdf`](docs/reports/BloodFlow_RequestsSlice_Report.pdf) |
+| Graduation defense guide (Arabic) | [`docs/reports/BloodFlow_Defense_Guide.pdf`](docs/reports/BloodFlow_Defense_Guide.pdf) |
 
 The reports list every file, flow, error code, design decision and open question for their slice.
 

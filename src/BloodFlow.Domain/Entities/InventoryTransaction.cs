@@ -24,6 +24,10 @@ namespace BloodFlow.Domain.Entities
         public int OnHandAfter { get; set; }
         public int ReservedAfter { get; set; }
 
+        /// <summary>Set for Reserve, Release and Deduct: which reservation line caused the change.</summary>
+        public int? ReservationLineId { get; set; }
+        public ReservationLine? ReservationLine { get; set; }
+
         public AdjustmentReason? ReasonCode { get; set; }
         public string? Reason { get; set; }
 

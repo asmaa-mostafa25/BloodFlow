@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using BloodFlow.Application.Common;
 using BloodFlow.Domain.Enums;
 
@@ -42,11 +41,4 @@ namespace BloodFlow.Application.Staff
         int? ApprovedByUserId,
         DateTime? ApprovedAt,
         string? RejectionReason);
-
-    /// <summary>Body for actions that must explain why (reject, deactivate).</summary>
-    public sealed record ReasonRequest
-    {
-        [Required, StringLength(500, MinimumLength = 3)]
-        public string Reason { get; init; } = string.Empty;
-    }
 }

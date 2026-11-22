@@ -147,9 +147,18 @@ namespace BloodFlow.Infrastructure.Services
                 return Error.Conflict("Organization.InvalidStatus", "Only active organizations can be deactivated.");
             }
 
-            // Workflow A2: an organization with active reservations, requests or transfers
-            // cannot be deactivated. Those tables arrive in Slices 2, 3 and 6;
-            // add the checks here when they exist.
+            // Workflow A2: an organization with active reservations or open requests cannot be
+            // deactivated (the blood would be stuck). Transfers are added to this check in Slice 6.
+            var hasOpenWork =
+                await _db.Reservations.AnyAsync(r => r.OrganizationId == id && r.Status == ReservationStatus.Active, cancellationToken)
+                || await _db.BloodRequests.AnyAsync(r => r.DestinationHospitalId == id
+                    && (r.Status == RequestStatus.Pending || r.Status == RequestStatus.Approved || r.Status == RequestStatus.Fulfilled),
+                    cancellationToken);
+            if (hasOpenWork)
+            {
+                return Error.Conflict("Organization.HasOpenWork",
+                    "This organization has active reservations or open requests. Finish or cancel them first.");
+            }
 
             organization.Status = OrganizationStatus.Deactivated;
 

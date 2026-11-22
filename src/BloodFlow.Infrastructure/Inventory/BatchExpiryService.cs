@@ -1,12 +1,11 @@
 using BloodFlow.Application.Common;
 using BloodFlow.Application.Inventory;
+using BloodFlow.Domain.Entities;
 using BloodFlow.Domain.Enums;
 using BloodFlow.Infrastructure.Common;
 using BloodFlow.Infrastructure.Persistence;
+using BloodFlow.Infrastructure.Requests;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace BloodFlow.Infrastructure.Inventory
 {
@@ -43,9 +42,30 @@ namespace BloodFlow.Infrastructure.Inventory
                     oldValues: new { Status = BatchStatus.Active },
                     newValues: new { batch.Status, batch.ExpiryDate, batch.OnHandQuantity, batch.ReservedQuantity },
                     organizationId: batch.OrganizationId);
+            }
 
-                // Slice 3: if the batch has active reservation lines, mark them Invalidated
-                // here and alert the staff (workflow B1).
+            // Slice 3: units reserved on an expired batch can never be sent. Release them with
+            // status Invalidated; the request then shows "needs reallocation" to the blood bank.
+            var dueIds = due.Select(b => b.Id).ToList();
+            var lines = dueIds.Count == 0
+                ? new List<ReservationLine>()
+                : await _db.ReservationLines
+                    .Include(l => l.Reservation)
+                    .Where(l => dueIds.Contains(l.BatchId) && l.Status == ReservationLineStatus.Active)
+                    .ToListAsync(cancellationToken);
+
+            var correlationId = Guid.NewGuid();
+            var batchesById = due.ToDictionary(b => b.Id);
+            foreach (var line in lines)
+            {
+                // userId null → the ledger row is a System action.
+                _db.InventoryTransactions.Add(ReservationLedger.Release(
+                    batchesById[line.BatchId], line, ReservationLineStatus.Invalidated, "BatchExpired",
+                    userId: null, correlationId, now));
+
+                _audit.Add(AuditActions.ReservationLineInvalidated, AuditEntityTypes.BloodRequest, line.Reservation.RequestId.ToString(),
+                    newValues: new { line.BatchId, line.Quantity, Reason = "BatchExpired" },
+                    organizationId: line.OrganizationId);
             }
 
             if (due.Count > 0)
@@ -54,54 +74,6 @@ namespace BloodFlow.Infrastructure.Inventory
             }
 
             return due.Count;
-        }
-    }
-
-    /// <summary>
-    /// Runs the expiry check when the API starts and then every hour.
-    /// Hourly (not once a day) so a restart or a missed run is caught quickly;
-    /// the check is idempotent, so running it often is harmless.
-    /// </summary>
-    internal sealed class BatchExpiryBackgroundService : BackgroundService
-    {
-        private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
-
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ILogger<BatchExpiryBackgroundService> _logger;
-
-        public BatchExpiryBackgroundService(IServiceScopeFactory scopeFactory, ILogger<BatchExpiryBackgroundService> logger)
-        {
-            _scopeFactory = scopeFactory;
-            _logger = logger;
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            using var timer = new PeriodicTimer(Interval);
-            do
-            {
-                try
-                {
-                    // A background job has no HTTP request, so it opens its own scope (the "table" 🍽️).
-                    using var scope = _scopeFactory.CreateScope();
-                    var expiry = scope.ServiceProvider.GetRequiredService<IBatchExpiryService>();
-                    var count = await expiry.ExpireDueBatchesAsync(stoppingToken);
-                    if (count > 0)
-                    {
-                        _logger.LogInformation("Marked {Count} blood batches as expired.", count);
-                    }
-                }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    // Never crash the API because of the job; try again next hour.
-                    _logger.LogError(ex, "Batch expiry job failed.");
-                }
-            }
-            while (await timer.WaitForNextTickAsync(stoppingToken));
         }
     }
 }
