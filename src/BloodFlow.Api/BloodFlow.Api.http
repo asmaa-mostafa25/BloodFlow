@@ -1,6 +1,13 @@
-@BloodFlow.Api_HostAddress = http://localhost:5034
+# BloodFlow API — quick manual tests from Visual Studio.
+# 1) Run the API (https profile).
+# 2) Send the login request, copy "token" from the response into @token below.
+# ⚠️ Never commit real passwords: keep YOUR_PASSWORD here and type the real one only while testing.
 
-POST https://localhost:7244/api/auth/login
+@host = https://localhost:7244
+@token = PASTE_TOKEN_HERE
+
+### Login (System Admin)
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
@@ -8,4 +15,57 @@ Content-Type: application/json
   "password": "YOUR_PASSWORD"
 }
 
+### Lookups (public)
+GET {{host}}/api/lookups/governorates
+
 ###
+GET {{host}}/api/lookups/organizations?type=Hospital
+
+### Admin: create a hospital
+POST {{host}}/api/admin/organizations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "Hospital",
+  "name": "مستشفى القصر العيني",
+  "cityName": "القاهرة",
+  "governorateId": 1
+}
+
+### Staff self-registration (public) → account is Pending
+POST {{host}}/api/auth/register/staff
+Content-Type: application/json
+
+{
+  "fullName": "Sara Ahmed",
+  "email": "sara@example.com",
+  "password": "YOUR_PASSWORD",
+  "organizationId": 1,
+  "jobTitle": "Blood bank nurse"
+}
+
+### Admin: approval queue
+GET {{host}}/api/admin/staff?status=Pending
+Authorization: Bearer {{token}}
+
+### Admin: approve staff user 2
+POST {{host}}/api/admin/staff/2/approve
+Authorization: Bearer {{token}}
+
+### Admin: reject staff user 2
+POST {{host}}/api/admin/staff/2/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Could not confirm employment with the hospital."
+}
+
+### Admin: settings
+GET {{host}}/api/admin/settings
+Authorization: Bearer {{token}}
+
+### Admin: audit trail
+GET {{host}}/api/admin/audit-logs?pageSize=20
+Authorization: Bearer {{token}}
