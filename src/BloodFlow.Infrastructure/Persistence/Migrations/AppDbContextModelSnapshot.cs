@@ -23,6 +23,181 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence<int>("BloodRequestNumbers");
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<string>("ActorRole")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("ActorType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EntityId")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(45)");
+
+                    b.Property<string>("NewValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OldValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("EntityType", "EntityId");
+
+                    b.ToTable("AuditLogs", t =>
+                        {
+                            t.HasCheckConstraint("CK_AuditLogs_Actor", "([ActorType] = 'User' AND [ActorUserId] IS NOT NULL) OR ([ActorType] = 'System' AND [ActorUserId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_AuditLogs_ActorType", "[ActorType] IN ('User', 'System')");
+                        });
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte>("BloodGroupId")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ExpiredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExpiryBasis")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateOnly>("ExpiryDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("InitialQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OnHandQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("OriginalCollectionDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("ReservedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BloodGroupId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Status", "ExpiryDate");
+
+                    b.HasIndex("OrganizationId", "BloodGroupId", "Status", "ExpiryDate");
+
+                    b.ToTable("BloodBatches", t =>
+                        {
+                            t.HasCheckConstraint("CK_BloodBatches_Dates", "[ExpiryDate] > [OriginalCollectionDate]");
+
+                            t.HasCheckConstraint("CK_BloodBatches_ExpiryBasis", "[ExpiryBasis] IN ('Entered', 'DefaultShelfLife')");
+
+                            t.HasCheckConstraint("CK_BloodBatches_Initial", "[InitialQuantity] > 0");
+
+                            t.HasCheckConstraint("CK_BloodBatches_OnHand", "[OnHandQuantity] >= 0");
+
+                            t.HasCheckConstraint("CK_BloodBatches_OnHandCoversReserved", "[OnHandQuantity] >= [ReservedQuantity]");
+
+                            t.HasCheckConstraint("CK_BloodBatches_Reserved", "[ReservedQuantity] >= 0");
+
+                            t.HasCheckConstraint("CK_BloodBatches_SourceType", "[SourceType] IN ('ManualIntake', 'Donation', 'Transfer')");
+
+                            t.HasCheckConstraint("CK_BloodBatches_Status", "[Status] IN ('Active', 'Expired')");
+                        });
+                });
+
             modelBuilder.Entity("BloodFlow.Domain.Entities.BloodGroup", b =>
                 {
                     b.Property<byte>("Id")
@@ -81,6 +256,261 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                         {
                             Id = (byte)8,
                             Code = "O-"
+                        });
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte>("BloodGroupId")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("ClientRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DestinationHospitalId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DestinationOrgType")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<bool>("EmergencyOverrideUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("NeededBy")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PatientAnonymizedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PatientFullName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RelationshipToPatient")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RequestNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("RequesterCapacity")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<DateTime>("StatusChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UnitsRequested")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BloodGroupId");
+
+                    b.HasIndex("ClientRequestId")
+                        .IsUnique()
+                        .HasFilter("[ClientRequestId] IS NOT NULL");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("RequestNumber")
+                        .IsUnique();
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.HasIndex("DestinationHospitalId", "DestinationOrgType");
+
+                    b.HasIndex("DestinationHospitalId", "Status");
+
+                    b.HasIndex("DestinationHospitalId", "BloodGroupId", "CreatedAt");
+
+                    b.HasIndex("Status", "RequestType", "NeededBy");
+
+                    b.ToTable("BloodRequests", t =>
+                        {
+                            t.HasCheckConstraint("CK_BloodRequests_Anonymized", "[PatientAnonymizedAt] IS NULL OR [PatientFullName] IS NULL");
+
+                            t.HasCheckConstraint("CK_BloodRequests_Capacity", "[RequesterCapacity] IN ('HospitalStaff', 'Patient', 'Representative')");
+
+                            t.HasCheckConstraint("CK_BloodRequests_DestinationIsHospital", "[DestinationOrgType] = 'Hospital'");
+
+                            t.HasCheckConstraint("CK_BloodRequests_FulfilledIsVerified", "[Status] NOT IN ('Fulfilled', 'Received') OR [VerificationStatus] = 'Verified' OR [EmergencyOverrideUsed] = 1");
+
+                            t.HasCheckConstraint("CK_BloodRequests_Status", "[Status] IN ('Pending', 'Approved', 'Fulfilled', 'Received', 'Rejected', 'Cancelled')");
+
+                            t.HasCheckConstraint("CK_BloodRequests_Type", "[RequestType] IN ('Normal', 'Emergency')");
+
+                            t.HasCheckConstraint("CK_BloodRequests_Units", "[UnitsRequested] > 0");
+
+                            t.HasCheckConstraint("CK_BloodRequests_Verification", "[VerificationStatus] IN ('Unverified', 'Verified')");
+                        });
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodRequestStatusHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ChangedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("RequestId", "ToStatus")
+                        .IsUnique();
+
+                    b.ToTable("BloodRequestStatusHistory", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BloodRequestStatusHistory_Transition", "([FromStatus] IS NULL AND [ToStatus] = 'Pending') OR ([FromStatus] = 'Pending' AND [ToStatus] IN ('Approved', 'Rejected', 'Cancelled')) OR ([FromStatus] = 'Approved' AND [ToStatus] IN ('Fulfilled', 'Cancelled')) OR ([FromStatus] = 'Fulfilled' AND [ToStatus] = 'Received')");
+                        });
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.EmergencyOverride", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OverriddenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OverriddenByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReasonText")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OverriddenByUserId");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("ReviewStatus");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("RequestId", "RequestType");
+
+                    b.ToTable("EmergencyOverrides", t =>
+                        {
+                            t.HasCheckConstraint("CK_EmergencyOverrides_Review", "[ReviewStatus] IN ('PendingReview', 'Reviewed')");
+
+                            t.HasCheckConstraint("CK_EmergencyOverrides_Type", "[RequestType] = 'Emergency'");
                         });
                 });
 
@@ -239,6 +669,100 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BloodFlow.Domain.Entities.InventoryTransaction", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ActorType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<int>("BatchId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ClientRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OnHandAfter")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OnHandDelta")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PerformedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(12)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<int?>("ReservationLineId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReservedAfter")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReservedDelta")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("ClientRequestId")
+                        .IsUnique()
+                        .HasFilter("[ClientRequestId] IS NOT NULL");
+
+                    b.HasIndex("PerformedByUserId");
+
+                    b.HasIndex("ReservationLineId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.ToTable("InventoryTransactions", t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryTransactions_Actor", "([ActorType] = 'User' AND [PerformedByUserId] IS NOT NULL) OR ([ActorType] = 'System' AND [PerformedByUserId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_ActorType", "[ActorType] IN ('User', 'System')");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_AdjustHasReason", "[TransactionType] <> 'Adjust' OR ([ReasonCode] IS NOT NULL AND [Reason] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_After", "[OnHandAfter] >= 0 AND [ReservedAfter] >= 0 AND [OnHandAfter] >= [ReservedAfter]");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_ReasonCode", "[ReasonCode] IS NULL OR [ReasonCode] IN ('Damaged', 'Expired', 'Correction')");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_ReservationLine", "[TransactionType] NOT IN ('Reserve', 'Release', 'Deduct') OR [ReservationLineId] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_Type", "[TransactionType] IN ('Intake', 'Adjust', 'Reserve', 'Release', 'Deduct')");
+                        });
+                });
+
             modelBuilder.Entity("BloodFlow.Domain.Entities.Organization", b =>
                 {
                     b.Property<int>("Id")
@@ -293,6 +817,227 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BloodFlow.Domain.Entities.Reservation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte>("BloodGroupId")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Reservations_OneLivePerRequest")
+                        .HasFilter("[Status] IN ('Active', 'Consumed')");
+
+                    b.HasIndex("RequestId", "BloodGroupId");
+
+                    b.ToTable("Reservations", t =>
+                        {
+                            t.HasCheckConstraint("CK_Reservations_ClosedAt", "([Status] = 'Active' AND [ClosedAt] IS NULL) OR ([Status] <> 'Active' AND [ClosedAt] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Reservations_Status", "[Status] IN ('Active', 'Consumed', 'Released')");
+                        });
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.ReservationLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BatchId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("BloodGroupId")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvalidationReason")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReservationId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(12)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId", "Status");
+
+                    b.HasIndex("BatchId", "OrganizationId", "BloodGroupId");
+
+                    b.HasIndex("ReservationId", "OrganizationId", "BloodGroupId");
+
+                    b.ToTable("ReservationLines", t =>
+                        {
+                            t.HasCheckConstraint("CK_ReservationLines_Invalidation", "([Status] = 'Invalidated' AND [InvalidationReason] IS NOT NULL) OR ([Status] <> 'Invalidated' AND [InvalidationReason] IS NULL)");
+
+                            t.HasCheckConstraint("CK_ReservationLines_Quantity", "[Quantity] > 0");
+
+                            t.HasCheckConstraint("CK_ReservationLines_Status", "[Status] IN ('Active', 'Consumed', 'Released', 'Invalidated')");
+                        });
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.StaffProfile", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("StaffKind")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(12)");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("OrganizationId", "StaffKind");
+
+                    b.ToTable("StaffProfiles", t =>
+                        {
+                            t.HasCheckConstraint("CK_StaffProfiles_StaffKind", "[StaffKind] IN ('Hospital', 'BloodBank')");
+                        });
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.SystemSetting", b =>
+                {
+                    b.Property<string>("SettingKey")
+                        .HasMaxLength(60)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<string>("ApprovalReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<bool>("IsMedicalParameter")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ValueType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("SettingKey");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("SystemSettings", t =>
+                        {
+                            t.HasCheckConstraint("CK_SystemSettings_ValueType", "[ValueType] IN ('Int', 'Decimal', 'Bool', 'String')");
+                        });
+                });
+
             modelBuilder.Entity("BloodFlow.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<int>("Id")
@@ -304,9 +1049,22 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("AccountStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(12)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(12)")
+                        .HasDefaultValue("Pending");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -314,6 +1072,11 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -351,14 +1114,19 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
+                        .IsUnique()
+                        .HasDatabaseName("EmailIndex")
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AspNetUsers_AccountStatus", "[AccountStatus] IN ('Pending', 'Active', 'Rejected', 'Deactivated')");
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<int>", b =>
@@ -494,6 +1262,150 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BloodFlow.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BloodFlow.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodBatch", b =>
+                {
+                    b.HasOne("BloodFlow.Domain.Entities.BloodGroup", "BloodGroup")
+                        .WithMany()
+                        .HasForeignKey("BloodGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BloodGroup");
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodRequest", b =>
+                {
+                    b.HasOne("BloodFlow.Domain.Entities.BloodGroup", "BloodGroup")
+                        .WithMany()
+                        .HasForeignKey("BloodGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BloodFlow.Domain.Entities.Organization", "DestinationHospital")
+                        .WithMany()
+                        .HasForeignKey("DestinationHospitalId", "DestinationOrgType")
+                        .HasPrincipalKey("Id", "Type")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BloodGroup");
+
+                    b.Navigation("DestinationHospital");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodRequestStatusHistory", b =>
+                {
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Domain.Entities.BloodRequest", "Request")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.EmergencyOverride", b =>
+                {
+                    b.HasOne("BloodFlow.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OverriddenByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BloodFlow.Domain.Entities.BloodRequest", "Request")
+                        .WithMany()
+                        .HasForeignKey("RequestId", "RequestType")
+                        .HasPrincipalKey("Id", "RequestType")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.InventoryTransaction", b =>
+                {
+                    b.HasOne("BloodFlow.Domain.Entities.BloodBatch", "Batch")
+                        .WithMany("Transactions")
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BloodFlow.Domain.Entities.ReservationLine", "ReservationLine")
+                        .WithMany()
+                        .HasForeignKey("ReservationLineId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("ReservationLine");
+                });
+
             modelBuilder.Entity("BloodFlow.Domain.Entities.Organization", b =>
                 {
                     b.HasOne("BloodFlow.Domain.Entities.Governorate", "Governorate")
@@ -503,6 +1415,89 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Governorate");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.Reservation", b =>
+                {
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Domain.Entities.BloodRequest", "Request")
+                        .WithMany("Reservations")
+                        .HasForeignKey("RequestId", "BloodGroupId")
+                        .HasPrincipalKey("Id", "BloodGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.ReservationLine", b =>
+                {
+                    b.HasOne("BloodFlow.Domain.Entities.BloodBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId", "OrganizationId", "BloodGroupId")
+                        .HasPrincipalKey("Id", "OrganizationId", "BloodGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Domain.Entities.Reservation", "Reservation")
+                        .WithMany("Lines")
+                        .HasForeignKey("ReservationId", "OrganizationId", "BloodGroupId")
+                        .HasPrincipalKey("Id", "OrganizationId", "BloodGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("Reservation");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.StaffProfile", b =>
+                {
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithOne()
+                        .HasForeignKey("BloodFlow.Domain.Entities.StaffProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodFlow.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "StaffKind")
+                        .HasPrincipalKey("Id", "Type")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.SystemSetting", b =>
+                {
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BloodFlow.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -556,9 +1551,26 @@ namespace BloodFlow.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodBatch", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.BloodRequest", b =>
+                {
+                    b.Navigation("Reservations");
+
+                    b.Navigation("StatusHistory");
+                });
+
             modelBuilder.Entity("BloodFlow.Domain.Entities.Governorate", b =>
                 {
                     b.Navigation("Organizations");
+                });
+
+            modelBuilder.Entity("BloodFlow.Domain.Entities.Reservation", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

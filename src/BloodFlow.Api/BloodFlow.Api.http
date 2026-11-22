@@ -1,6 +1,13 @@
-@BloodFlow.Api_HostAddress = http://localhost:5034
+# BloodFlow API — quick manual tests from Visual Studio.
+# 1) Run the API (https profile).
+# 2) Send the login request, copy "token" from the response into @token below.
+# ⚠️ Never commit real passwords: keep YOUR_PASSWORD here and type the real one only while testing.
 
-POST https://localhost:7244/api/auth/login
+@host = https://localhost:7244
+@token = PASTE_TOKEN_HERE
+
+### Login (System Admin)
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
@@ -8,19 +15,175 @@ Content-Type: application/json
   "password": "YOUR_PASSWORD"
 }
 
-###
-
-### ---------- AI service (run the AI server first; paste the token from /api/auth/login) ----------
-@token = PASTE_JWT_HERE
-
-GET https://localhost:7244/api/ai/health
+### Lookups (public)
+GET {{host}}/api/lookups/governorates
 
 ###
-GET https://localhost:7244/api/ai/forecast
+GET {{host}}/api/lookups/organizations?type=Hospital
+
+### Admin: create a hospital
+POST {{host}}/api/admin/organizations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "Hospital",
+  "name": "مستشفى القصر العيني",
+  "cityName": "القاهرة",
+  "governorateId": 1
+}
+
+### Staff self-registration (public) → account is Pending
+POST {{host}}/api/auth/register/staff
+Content-Type: application/json
+
+{
+  "fullName": "Sara Ahmed",
+  "email": "sara@example.com",
+  "password": "YOUR_PASSWORD",
+  "organizationId": 1,
+  "jobTitle": "Blood bank nurse"
+}
+
+### Admin: approval queue
+GET {{host}}/api/admin/staff?status=Pending
+Authorization: Bearer {{token}}
+
+### Admin: approve staff user 2
+POST {{host}}/api/admin/staff/2/approve
+Authorization: Bearer {{token}}
+
+### Admin: reject staff user 2
+POST {{host}}/api/admin/staff/2/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Could not confirm employment with the hospital."
+}
+
+### Admin: settings
+GET {{host}}/api/admin/settings
+Authorization: Bearer {{token}}
+
+### Admin: audit trail
+GET {{host}}/api/admin/audit-logs?pageSize=20
+Authorization: Bearer {{token}}
+
+### ---------- Slice 2: inventory (log in as an approved staff member first) ----------
+
+### Stock summary
+GET {{host}}/api/inventory/summary
+Authorization: Bearer {{token}}
+
+### Manual intake: 10 units of O+ (bloodGroupId 7); expiry defaults to collection + 35 days
+POST {{host}}/api/inventory/batches
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bloodGroupId": 7,
+  "quantity": 10,
+  "collectionDate": "2026-11-19",
+  "clientRequestId": "6f1c2a52-6b0e-4c55-9a43-1f4b3c2d8e01"
+}
+
+### Batches expiring within 7 days (FEFO order)
+GET {{host}}/api/inventory/batches?expiringWithinDays=7
+Authorization: Bearer {{token}}
+
+### Remove 2 damaged units from batch 1
+POST {{host}}/api/inventory/batches/1/adjust
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantityDelta": -2,
+  "reasonCode": "Damaged",
+  "reason": "Two bags leaked in the fridge.",
+  "clientRequestId": "9a0d7c11-2f3e-4b8a-8c6d-5e4f3a2b1c00"
+}
+
+### Stock ledger
+GET {{host}}/api/inventory/transactions
+Authorization: Bearer {{token}}
+
+### ---------- Slice 3: blood requests ----------
+### Scenario: log in as HOSPITAL staff → create; log in as BLOOD BANK staff → board, approve, fulfil;
+### back as hospital → receive. Paste each token into @token.
+
+### (Hospital) Create an emergency request: 3 units of O+ needed by tomorrow (UTC)
+POST {{host}}/api/requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "requestType": "Emergency",
+  "bloodGroupId": 7,
+  "unitsRequested": 3,
+  "neededBy": "2026-11-23T18:00:00Z",
+  "patientFullName": "Patient Name Here",
+  "clientRequestId": "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9"
+}
+
+### (Hospital) Requests for my hospital — only the ones that need attention
+GET {{host}}/api/requests/hospital?onlyFlagged=false
+Authorization: Bearer {{token}}
+
+### (Blood bank) The board: emergencies first, with my available units per row
+GET {{host}}/api/requests/board
+Authorization: Bearer {{token}}
+
+### (Blood bank) Approve request 1 = reserve all units now (FEFO)
+POST {{host}}/api/requests/1/approve
+Authorization: Bearer {{token}}
+
+### Details: status, flags, reservation lines (which batch, how many)
+GET {{host}}/api/requests/1
+Authorization: Bearer {{token}}
+
+### (Blood bank) Fulfil: units leave stock (Deduct)
+POST {{host}}/api/requests/1/fulfil
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### (Hospital) Confirm the blood arrived
+POST {{host}}/api/requests/1/receive
+Authorization: Bearer {{token}}
+
+### Status timeline
+GET {{host}}/api/requests/1/history
+Authorization: Bearer {{token}}
+
+### Cancel (pending or approved) — releases reserved units
+POST {{host}}/api/requests/2/cancel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Patient transferred to another hospital."
+}
+
+### (Admin) Flagged requests: overdue, unconfirmed receipt, emergency escalation
+GET {{host}}/api/admin/requests?onlyFlagged=true
+Authorization: Bearer {{token}}
+
+### (Admin) Emergency overrides waiting for review
+GET {{host}}/api/admin/emergency-overrides
+Authorization: Bearer {{token}}
+
+### ---------- AI service (start the AI server first; uses the same @token) ----------
+
+GET {{host}}/api/ai/health
+
+###
+GET {{host}}/api/ai/forecast
 Authorization: Bearer {{token}}
 
 ###
-POST https://localhost:7244/api/ai/shortage
+POST {{host}}/api/ai/shortage
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -29,11 +192,11 @@ Content-Type: application/json
 }
 
 ###
-POST https://localhost:7244/api/ai/expiry
+POST {{host}}/api/ai/expiry
 Authorization: Bearer {{token}}
 
 ###
-POST https://localhost:7244/api/ai/substitutions
+POST {{host}}/api/ai/substitutions
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
