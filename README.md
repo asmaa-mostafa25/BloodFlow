@@ -320,7 +320,7 @@ Pending ──approve──► Approved ──fulfil──► Fulfilled ──re
 | POST | `/{id}/receive` | Destination hospital | Confirm arrival |
 | POST | `/{id}/reject` · `/{id}/cancel` | See rules | `{ reason }` — cancelling an approved request releases its units |
 
-Admin: `GET /api/admin/requests?onlyFlagged=true`, `POST /api/admin/requests/{id}/cancel`, `GET /api/admin/emergency-overrides`, `POST /api/admin/emergency-overrides/{id}/review`.
+Admin: `GET /api/admin/requests?onlyFlagged=true`, `POST /api/admin/requests/{id}/cancel` (pending only), `GET /api/admin/emergency-overrides`, `POST /api/admin/emergency-overrides/{id}/review`.
 
 Ready-made requests: [`src/BloodFlow.Api/BloodFlow.Api.http`](src/BloodFlow.Api/BloodFlow.Api.http).
 
@@ -348,7 +348,7 @@ From the Phase 1 business workflows:
 **Staff & organizations (A1, A2)**
 - Staff register as `Pending`; their kind (hospital / blood bank) always equals their organization's type — enforced by a composite foreign key.
 - Approval requires an active organization. Reject and deactivate need a reason. `Rejected` is final.
-- An organization's type cannot change after creation. Names are unique per governorate.
+- An organization with active reservations or open requests cannot be deactivated. An organization's type cannot change after creation. Names are unique per governorate.
 - Every status change writes an audit row **in the same database transaction**.
 
 **Inventory (B1, H4, A3)**

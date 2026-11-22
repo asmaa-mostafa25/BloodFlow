@@ -30,7 +30,7 @@ namespace BloodFlow.Api.Controllers.Admin
         public async Task<IActionResult> All([FromQuery] RequestQuery query, CancellationToken cancellationToken) =>
             Ok(await _admin.GetAllAsync(query, cancellationToken));
 
-        /// <summary>Cancel any pending or approved request (e.g. entered by mistake). Reserved units are released.</summary>
+        /// <summary>Cancel a PENDING request (e.g. entered by mistake). Approved requests hold stock and are cancelled by the parties.</summary>
         [HttpPost("requests/{id:int}/cancel")]
         [ProducesResponseType<RequestDetailsDto>(StatusCodes.Status200OK)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

@@ -506,7 +506,8 @@ namespace BloodFlow.Infrastructure.Requests
 
         /// <summary>
         /// Cancel: while Pending (creator, destination hospital, admin) or Approved
-        /// (also the executing organization). Cancelling an approved request releases its stock.
+        /// (creator, destination hospital, executing organization — not the admin).
+        /// Cancelling an approved request releases its stock.
         /// </summary>
         public async Task<Result<RequestDetailsDto>> CancelAsync(int id, string reason, CancellationToken cancellationToken = default)
         {
@@ -535,6 +536,16 @@ namespace BloodFlow.Infrastructure.Requests
                 return Error.Forbidden("Request.CannotCancel", "Only the requester, the destination hospital, the executing organization or an admin can cancel.");
             }
             if (!RequestRules.CanTransition(request.Status, RequestStatus.Cancelled)) return InvalidState(request, "cancel");
+
+            // Section 3: the admin may cancel only PENDING requests. Cancelling an approved one
+            // releases stock, and the admin never changes stock (A3).
+            var isOtherParty = request.CreatedByUserId == userId || request.DestinationHospitalId == orgId
+                               || (reservation is not null && reservation.OrganizationId == orgId);
+            if (isAdmin && !isOtherParty && request.Status != RequestStatus.Pending)
+            {
+                return Error.Conflict("Request.AdminCannotCancelApproved",
+                    "An approved request holds stock; only the requester, the hospital or the executing organization can cancel it.");
+            }
 
             var now = _clock.UtcNow;
             var correlationId = Guid.NewGuid();
