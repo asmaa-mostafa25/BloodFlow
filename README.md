@@ -108,6 +108,31 @@ On startup, the **five application roles** are seeded automatically.
 
 ---
 
+### 6. Connect the AI service
+
+The backend talks to the BloodFlow AI service (FastAPI) server-to-server. The frontend never calls the AI directly: it calls `/api/ai/*` with its JWT, and the backend adds the AI key.
+
+1. Start the AI server (in the AI folder): `python -m uvicorn api:app --host 0.0.0.0 --port 8000`, and wait for `Application startup complete`.
+2. Give the backend the same key the AI server uses (`BLOODFLOW_API_KEY`, default `bloodflow-secret` for testing only):
+   ```bash
+   cd src/BloodFlow.Api
+   dotnet user-secrets set "BloodFlowAi:ApiKey" "bloodflow-secret"
+   ```
+3. If the AI runs on another machine, change `BloodFlowAi:BaseUrl` in `appsettings.json` (e.g. `http://192.168.1.10:8000`).
+
+| Backend endpoint | AI endpoint | Who |
+|---|---|---|
+| `GET /api/ai/health` | `GET /health` | anyone |
+| `GET /api/ai/stock` | `GET /stock` | staff |
+| `GET /api/ai/forecast` | `GET /forecast/all` | staff |
+| `POST /api/ai/shortage` | `POST /predict/shortage` | staff |
+| `POST /api/ai/expiry` | `POST /predict/expiry` | staff |
+| `POST /api/ai/substitutions` | `POST /substitutions` | staff |
+| `POST /api/ai/demand` | `POST /predict/demand` | staff |
+| `POST /api/ai/retrain` | `POST /retrain` | SystemAdmin |
+
+Staff = SystemAdmin, HospitalStaff, BloodBankStaff. Responses are camelCase. Errors come back as ProblemDetails: `400` bad input (the AI's message is in `detail`), `409` a retrain is already running, `502` wrong AI key, `503` AI server down or still starting. `retrain` defaults to `mode: "append"`.
+
 ## 📚 Reference Data
 
 ### Blood Groups

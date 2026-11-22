@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using BloodFlow.Infrastructure.Persistence;
 using BloodFlow.Infrastructure.Identity;
 using BloodFlow.Infrastructure.Authentication;
+using BloodFlow.Infrastructure.Ai;
 using BloodFlow.Application.Auth;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -34,6 +35,7 @@ namespace BloodFlow.Infrastructure
             services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
             services.AddScoped<JwtTokenGenerator>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddBloodFlowAi(configuration);
             var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
             if (jwtSettings == null || string.IsNullOrWhiteSpace(jwtSettings.Key))
             {
