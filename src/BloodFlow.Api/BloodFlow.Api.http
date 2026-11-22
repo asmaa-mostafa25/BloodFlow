@@ -107,3 +107,69 @@ Content-Type: application/json
 ### Stock ledger
 GET {{host}}/api/inventory/transactions
 Authorization: Bearer {{token}}
+
+### ---------- Slice 3: blood requests ----------
+### Scenario: log in as HOSPITAL staff → create; log in as BLOOD BANK staff → board, approve, fulfil;
+### back as hospital → receive. Paste each token into @token.
+
+### (Hospital) Create an emergency request: 3 units of O+ needed by tomorrow (UTC)
+POST {{host}}/api/requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "requestType": "Emergency",
+  "bloodGroupId": 7,
+  "unitsRequested": 3,
+  "neededBy": "2026-11-23T18:00:00Z",
+  "patientFullName": "Patient Name Here",
+  "clientRequestId": "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9"
+}
+
+### (Hospital) Requests for my hospital — only the ones that need attention
+GET {{host}}/api/requests/hospital?onlyFlagged=false
+Authorization: Bearer {{token}}
+
+### (Blood bank) The board: emergencies first, with my available units per row
+GET {{host}}/api/requests/board
+Authorization: Bearer {{token}}
+
+### (Blood bank) Approve request 1 = reserve all units now (FEFO)
+POST {{host}}/api/requests/1/approve
+Authorization: Bearer {{token}}
+
+### Details: status, flags, reservation lines (which batch, how many)
+GET {{host}}/api/requests/1
+Authorization: Bearer {{token}}
+
+### (Blood bank) Fulfil: units leave stock (Deduct)
+POST {{host}}/api/requests/1/fulfil
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### (Hospital) Confirm the blood arrived
+POST {{host}}/api/requests/1/receive
+Authorization: Bearer {{token}}
+
+### Status timeline
+GET {{host}}/api/requests/1/history
+Authorization: Bearer {{token}}
+
+### Cancel (pending or approved) — releases reserved units
+POST {{host}}/api/requests/2/cancel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Patient transferred to another hospital."
+}
+
+### (Admin) Flagged requests: overdue, unconfirmed receipt, emergency escalation
+GET {{host}}/api/admin/requests?onlyFlagged=true
+Authorization: Bearer {{token}}
+
+### (Admin) Emergency overrides waiting for review
+GET {{host}}/api/admin/emergency-overrides
+Authorization: Bearer {{token}}
