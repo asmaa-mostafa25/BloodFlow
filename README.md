@@ -37,6 +37,7 @@ Each slice goes through: design review → Domain → EF configuration + migrati
 - [Architecture](#️-architecture)
 - [Getting started](#-getting-started)
 - [Configuration](#️-configuration)
+- [Deployment](#-deployment)
 - [Authentication & roles](#-authentication--roles)
 - [API reference](#-api-reference)
 - [API conventions](#-api-conventions)
@@ -237,6 +238,8 @@ Staff = SystemAdmin, HospitalStaff, BloodBankStaff. Responses are camelCase. Err
 | `AdminSeed:Email` / `AdminSeed:Password` | User Secrets | — | Required, used to create the first admin |
 | `BloodFlowAi:ApiKey` | User Secrets | — | Same key as the AI server. Missing → AI calls return `502` |
 | `BloodFlowAi:BaseUrl` | `appsettings.json` | `http://127.0.0.1:8000` | Where the AI service runs |
+| `Swagger:Enabled` | `appsettings.json` / server file | `false` | Swagger is always on in Development; set `true` on the server to show it there (e.g. for the demo) |
+| `Cors:AllowedOrigins` | `appsettings.json` / server file | `localhost:3000`, `4200`, `5173` | Websites allowed to call the API from a browser. Add the deployed Frontend URL here |
 | `App:TimeZone` | `appsettings.json` | `Africa/Cairo` | Decides "today" for expiry dates |
 
 On a server (e.g. MonsterASP) use **environment variables** instead of User Secrets: `ConnectionStrings__DefaultConnection`, `Jwt__Key`, `AdminSeed__Email`, `AdminSeed__Password`.
@@ -256,6 +259,38 @@ On a server (e.g. MonsterASP) use **environment variables** instead of User Secr
 | `Privacy.PatientNameRetentionMonths` | 12 | |
 
 \* Medical values are **assumptions awaiting the supervisor's confirmation**. Changing them requires an `approvalReference`.
+
+---
+
+## 🌍 Deployment
+
+The API runs on **MonsterASP.NET** (free plan): **http://bloodflow.runasp.net** · Swagger: `/swagger`.
+
+**Server settings** live in `src/BloodFlow.Api/appsettings.Production.json`, which is **git-ignored** and published with the app. Copy [`appsettings.Production.example.json`](src/BloodFlow.Api/appsettings.Production.example.json) and fill in the real values. Never commit it.
+
+| | From your machine | From the website |
+|---|---|---|
+| Database server | `dbXXXXX.public.databaseasp.net` (enable *Remote access* first) | `dbXXXXX.databaseasp.net` |
+
+**Steps**
+1. Create the tables on the server database from your machine:
+   ```bash
+   dotnet ef database update --project src/BloodFlow.Infrastructure --startup-project src/BloodFlow.Api \
+     --connection "Server=dbXXXXX.public.databaseasp.net;Database=dbXXXXX;User Id=dbXXXXX;Password=***;Encrypt=True;TrustServerCertificate=True"
+   ```
+2. Visual Studio → right-click `BloodFlow.Api` → **Publish** → import the MonsterASP publish profile → **Publish**.
+   *Fallback:* `dotnet publish src/BloodFlow.Api -c Release -o publish`, zip the **contents** of `publish/`, upload to `wwwroot` in the File manager and extract.
+3. Check `http://bloodflow.runasp.net/api/lookups/blood-groups` returns the 8 blood groups.
+
+**Troubleshooting**
+| Symptom | Cause / fix |
+|---|---|
+| `404` on the home page | Normal: the API has no home page. |
+| `HTTP Error 500.30` | The app crashed on start. In `wwwroot/web.config` set `stdoutLogEnabled="true"`, create a `logs` folder, reload, read the newest log. Turn it off afterwards. |
+| `Login failed for user` (18456) | Wrong database password in the server file, or the app was not restarted (re-save `web.config` or publish again). |
+| `server was not found` from your machine | Use the `public` server name and enable remote access. |
+| Frontend gets a CORS error | Add its exact URL (scheme + host + port) to `Cors:AllowedOrigins` on the server. |
+| HTTPS not working | Free plan: request Let's Encrypt with a support ticket. |
 
 ---
 

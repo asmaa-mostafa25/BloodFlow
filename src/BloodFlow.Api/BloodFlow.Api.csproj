@@ -24,4 +24,9 @@
     <ProjectReference Include="..\BloodFlow.Infrastructure\BloodFlow.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- A template only: never copied to the server. -->
+    <Content Update="appsettings.Production.example.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>
