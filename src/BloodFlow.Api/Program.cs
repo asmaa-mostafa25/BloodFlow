@@ -32,6 +32,19 @@ builder.Services.AddOpenApi(options =>
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// CORS: which websites (the Frontend) may call this API from the browser.
+// The list lives in configuration (Cors:AllowedOrigins), so a new Frontend URL needs no code change.
+// Swagger and Postman are not browsers, so CORS never affects them.
+const string FrontendCorsPolicy = "Frontend";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy => policy
+        .WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
 // Seeds the five roles and the first System Admin.
@@ -41,7 +54,9 @@ await IdentitySeeder.SeedAsync(app.Services);
 
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
+// Swagger: always on the developer's machine; on the server only when Swagger:Enabled is true
+// (turn it off after the graduation demo without changing code).
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
 {
     app.MapOpenApi();                                   // /openapi/v1.json
     app.UseSwaggerUI(options =>                         // /swagger
@@ -52,6 +67,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(FrontendCorsPolicy); // before authentication, so browser preflight requests get the CORS headers
 app.UseAuthentication();   // 1. Who are you? (reads and checks the JWT)
 app.UseAuthorization();    // 2. Are you allowed? (checks the role)
 
