@@ -99,7 +99,7 @@ Plain C# classes that describe the data: `Organization`, `StaffProfile`, `BloodB
 - **Service implementations** of the Application interfaces.
 - **Identity + JWT**: user store, password hashing, lockout, token creation and validation.
 - **Background job**: `MaintenanceBackgroundService` (every hour).
-- **AI client**: typed `HttpClient` that talks to the separate FastAPI AI service.
+- **AI client**: named `HttpClient`s (via `IHttpClientFactory`) that talk to the separate FastAPI AI service.
 
 ### 3.4 `BloodFlow.Api` — the door
 - **Controllers** receive HTTP requests, call one service method and convert the `Result` into an HTTP response.
